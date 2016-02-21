@@ -34,6 +34,18 @@ func (session *Session) Close() {
 	session.server.CloseSession(session)
 }
 
+func (session *Session) Send(data interface{}) error {
+	_, err := session.protocol.Encode(session, data)
+	if err != nil {
+		session.Error(err, "Sending data failed.")
+	}
+	return err
+}
+
+func (session *Session) Conn() net.Conn {
+	return session.conn
+}
+
 func (session *Session) Panic(err error) {
 	session.Error(err, "")
 	session.Close()

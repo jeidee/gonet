@@ -6,11 +6,6 @@ import (
 	"os"
 )
 
-type IncommingData struct {
-	session *Session
-	data    interface{}
-}
-
 type Server struct {
 	lisener   net.Listener
 	sessions  map[net.Conn]*Session
@@ -18,26 +13,33 @@ type Server struct {
 	protocol  Protocol
 	isRunning bool
 
+	serverEventHandler ServerEventHandler
+
 	accepting chan *Session
 	closing   chan *Session
 	incomming chan *IncommingData
 }
 
-func NewServer(port int16, protocol Protocol) *Server {
+func NewServer(port int16, protocol Protocol, serverEventHandler ServerEventHandler) *Server {
 	s := new(Server)
 
-	s.port = port
-	s.protocol = protocol
-	s.isRunning = false
-
-	s.accepting = make(chan *Session)
-	s.closing = make(chan *Session)
-	s.incomming = make(chan *IncommingData)
+	s.Init(port, protocol, serverEventHandler)
 
 	return s
 }
 
 /* public functions - APIs */
+
+func (s *Server) Init(port int16, protocol Protocol, serverEventHandler ServerEventHandler) {
+	s.port = port
+	s.protocol = protocol
+	s.isRunning = false
+	s.serverEventHandler = serverEventHandler
+
+	s.accepting = make(chan *Session)
+	s.closing = make(chan *Session)
+	s.incomming = make(chan *IncommingData)
+}
 
 func (s *Server) Run() bool {
 	if s.isRunning {
@@ -92,14 +94,17 @@ func (s *Server) eventLoop() {
 		select {
 		case session := <-s.accepting:
 			s.sessions[session.conn] = session
+			s.serverEventHandler.OnAccept(session)
 			s.Info("New session is accepted!")
 
 		case session := <-s.closing:
 			delete(s.sessions, session.conn)
+			s.serverEventHandler.OnClose(session)
 			s.Info("Session is closed!")
 
 		case data := <-s.incomming:
-			s.Info("Incomming new data %v, %v", data.session, data.data)
+			s.serverEventHandler.OnIncomming(data)
+			s.Info("Incomming new data %v, %v", data.Session, data.Data)
 		}
 	}
 
