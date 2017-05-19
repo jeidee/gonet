@@ -116,9 +116,7 @@ func (self *Client) eventLoop() {
 			}
 
 			if self.stub != nil {
-				var err error
-				self.stub.ParseAndDo(data, err)
-				if err != nil {
+				if err := self.stub.ParseAndDo(data); err != nil {
 					self.Error(err, "Parsing failed.")
 				}
 			}

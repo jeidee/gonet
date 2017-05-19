@@ -14,18 +14,17 @@ type ChatStub struct {
 	client *ChatClient
 }
 
-func (stub *ChatStub) ParseAndDo(data *gonet.IncommingData, err error) {
+func (stub *ChatStub) ParseAndDo(data *gonet.IncommingData) error {
 	defer func() {
 		if r := recover(); r != nil {
-			err = errors.New(fmt.Sprintf("%v", r))
+			err := errors.New(fmt.Sprintf("%v", r))
 			stub.client.Error(err, "[ChatStub:ParseAndDo]")
 		}
 	}()
 
 	m, ok := data.Data.(map[string]interface{})
 	if !ok {
-		err = errors.New("Invalid packet")
-		return
+		return errors.New("Invalid packet")
 	}
 
 	id := uint32(m["packet_id"].(float64))
@@ -41,9 +40,10 @@ func (stub *ChatStub) ParseAndDo(data *gonet.IncommingData, err error) {
 		stub.OnNotifyChat(data.Session, NotifyChat{PacketId: id, SenderNickname: m["sender_nickname"].(string), Chat: m["chat"].(string)})
 		break
 	default:
-		err = errors.New("Not supported packet.")
-		break
+		return errors.New("Not supported packet.")
 	}
+
+	return nil
 }
 
 func (stub *ChatStub) OnResLogin(session *gonet.Session, obj ResLogin) {
